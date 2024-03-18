@@ -12,8 +12,9 @@
 
 static TaskHandle_t s_task_handle;
 
-void tempButtonCallback() {
-    ESP_LOGI("button", "Button pressed");
+void tempButtonCallback()
+{
+    setAlarmState(ALARM_PRIMED);
 }
 
 void app_main() 
@@ -31,7 +32,7 @@ void app_main()
     initWakeupinator();
 
     initAlarm();
-    setAlarmState(ALARM_PRIMED);
+    // setAlarmState(ALARM_PRIMED);
     setThreshold(10000);
 
     initButton();
