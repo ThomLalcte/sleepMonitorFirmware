@@ -8,6 +8,8 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
+#define TAG "CapacitiveSensor"
+
 // counter definitions
 pcnt_unit_handle_t counterHandle;
 volatile uint32_t overflowCount = 0;

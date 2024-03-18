@@ -5,8 +5,16 @@
 #include "piezoSensor.h"
 #include "capactiveSensor.h"
 #include "wakeupinator.h"
+#include "alarm.h"
+#include "button.h"
+
+#include "esp_log.h"
 
 static TaskHandle_t s_task_handle;
+
+void tempButtonCallback() {
+    ESP_LOGI("button", "Button pressed");
+}
 
 void app_main() 
 {
@@ -22,12 +30,23 @@ void app_main()
     // Initialize the wakeupinator
     initWakeupinator();
 
+    initAlarm();
+    setAlarmState(ALARM_PRIMED);
+    setThreshold(10000);
+
+    initButton();
+    setButtonPressedCallback(tempButtonCallback);
+
     while(1) {
         piezoSensorTask();
 
         capacitiveSensorTask();
 
         wakeupinatorTask();
+
+        alarmTask();
+
+        buttonTask();
 
         vTaskDelay(1);
     }

@@ -6,6 +6,7 @@
 #include "esp_timer.h"
 
 bool wakeupinatorEnabled = false;
+#define TAG "wakeupinator"
 
 void initWakeupinatorGPIO()
 {

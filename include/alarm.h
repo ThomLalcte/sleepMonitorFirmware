@@ -4,8 +4,6 @@
 #include "capactiveSensor.h"
 #include "wakeupinator.h"
 
-#define TAG "alarm"
-
 enum alarmState_t
 {
     ALARM_OFF,
@@ -14,9 +12,9 @@ enum alarmState_t
     ALARM_FAILED
 };
 
-void alarmInit();
+void initAlarm();
 void alarmTask();
-unsigned long sampleCapacitiveDiff();
+void sampleCapacitiveDiff();
 
 
 void setAlarmState(enum alarmState_t state);

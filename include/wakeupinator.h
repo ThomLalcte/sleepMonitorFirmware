@@ -4,7 +4,6 @@
 #define motorPin 15
 #define cycleTime 1000
 
-#define TAG "wakeupinator"
 
 void initWakeupinator();
 void enableWakeupinator();
