@@ -7,6 +7,7 @@
 #include "wakeupinator.h"
 #include "alarm.h"
 #include "button.h"
+#include "wifi.h"
 
 #include "esp_log.h"
 
@@ -19,6 +20,8 @@ void tempButtonCallback()
 
 void app_main() 
 {
+
+    initWifi();
 
     s_task_handle = xTaskGetCurrentTaskHandle();
 
@@ -39,6 +42,9 @@ void app_main()
     setButtonPressedCallback(tempButtonCallback);
 
     while(1) {
+
+        wifiTask();
+
         piezoSensorTask();
 
         capacitiveSensorTask();
