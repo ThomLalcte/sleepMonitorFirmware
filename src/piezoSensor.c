@@ -2,6 +2,9 @@
 #include "esp_log.h"
 #include "esp_adc/adc_continuous.h"
 #include "driver/gpio.h"
+#include "math.h"
+
+#define TAG "piezoSensor"
 
 struct PiezoParameters_t
 {
@@ -15,6 +18,8 @@ adc_continuous_handle_t handle = NULL;
 uint16_t piezoSampleBuffer[piezoSampleBufferSize];
 bool checkReadingsFlag = false;
 static TaskHandle_t s_task_handle;
+
+static unsigned long long piezoSensorValue = 0;
 
 static bool IRAM_ATTR s_conv_done_cb(adc_continuous_handle_t handle, const adc_continuous_evt_data_t *edata, void *user_data)
 {
@@ -71,7 +76,7 @@ void initPiezoGPIOs()
         .intr_type = GPIO_INTR_DISABLE,
     };
     ESP_ERROR_CHECK(gpio_config(&io_conf));
-    ESP_ERROR_CHECK(gpio_set_level(PIEZO_G10_PIN, 0));
+    ESP_ERROR_CHECK(gpio_set_level(PIEZO_G10_PIN, 1));
     ESP_ERROR_CHECK(gpio_set_level(PIEZO_ATN1MEG_PIN, 0));
     io_conf.pin_bit_mask = (1ULL << PIEZO_ATN100K_PIN) | (1ULL << PIEZO_ATN10K_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
@@ -87,12 +92,16 @@ void initPiezoSensor(TaskHandle_t *mainTaskHandle)
 {
     ESP_LOGI(TAG, "Initializing piezo sensor");
 
+    unsigned long long piezoValue = 0;
+    ESP_LOGI(TAG, "Max piezoValue: %llu", piezoValue-1);
+
     s_task_handle = *mainTaskHandle;
 
     initADC();
 
     initPiezoGPIOs();
 }
+
 
 void piezoSensorTask()
 {
@@ -104,26 +113,44 @@ void piezoSensorTask()
     }
 }
 
+unsigned char sillyCounter = 0;
+
 void readPiezoSensor()
 {
     uint32_t readCount = 0;
     adc_continuous_read(handle, (uint8_t *)piezoSampleBuffer, piezoSampleBufferSize, &readCount, 50);
     // sum the values to reduce the size of the data
-    uint32_t summed = 0;
+    unsigned long bufferSum = 0;
     for (int i = 0; i < sizeof(piezoSampleBuffer) / sizeof(piezoSampleBuffer[0]); i++)
     {
-        summed += piezoSampleBuffer[i];
+        bufferSum += piezoSampleBuffer[i];
     }
-    // ESP_LOGI(TAG, "%lu", summed);
-    // printf(">sum:%lu\n", summed);
+    if (bufferSum < 100)
+    {
+        increasePiezoSensitivity();
+    }
+    else if (bufferSum > (sizeof(piezoSampleBuffer) / sizeof(piezoSampleBuffer[0])) * (0b1<<(10-4)))
+    {
+        decreasePiezoSensitivity();
+    }
+    // sillyCounter++;
+    if (sillyCounter%100 == 1)
+    {
+        ESP_LOGI(TAG, "Piezo sensor value: %lu", bufferSum);
+        sillyCounter = 0;
+    }
+    bufferSum *= pow10(-piezoParameters.attenuation);
+    bufferSum *= pow10(piezoParameters.gain);
+    piezoSensorValue += bufferSum;
 }
 
 void increasePiezoSensitivity()
 {
+    // ESP_LOGI(TAG, "Increasing sensitivity");
     // check if the attenuation can be diminished
-    if (piezoParameters.attenuation > -3)
+    if (piezoParameters.attenuation < 0)
     {
-        piezoParameters.attenuation--;
+        piezoParameters.attenuation++;
         ESP_LOGV(TAG, "Attenuation: %d", piezoParameters.attenuation);
         switch (piezoParameters.attenuation)
         {
@@ -164,6 +191,7 @@ void increasePiezoSensitivity()
 
 void decreasePiezoSensitivity()
 {
+    // ESP_LOGI(TAG, "Decreasing sensitivity");
     // check if the gain can be diminished
     if (piezoParameters.gain > 0)
     {
@@ -172,9 +200,9 @@ void decreasePiezoSensitivity()
         ESP_ERROR_CHECK(gpio_set_level(PIEZO_G10_PIN, 0));
     }
     // check if the attenuation can be increased
-    else if (piezoParameters.attenuation < 0)
+    else if (piezoParameters.attenuation > -3)
     {
-        piezoParameters.attenuation++;
+        piezoParameters.attenuation--;
         ESP_LOGV(TAG, "Attenuation: %d", piezoParameters.attenuation);
         switch (piezoParameters.attenuation)
         {
@@ -204,7 +232,6 @@ void decreasePiezoSensitivity()
             break;
         }
     }
-
 }
 
 void setPiezoSensitivity(short attenuation, unsigned short gain)
@@ -248,3 +275,12 @@ void setPiezoSensitivity(short attenuation, unsigned short gain)
     ESP_ERROR_CHECK(gpio_set_level(PIEZO_G10_PIN, piezoParameters.gain));
 }
 
+unsigned long getPiezoSensorValue()
+{
+    return piezoSensorValue;
+}
+
+void resetPiezoSensorValue()
+{
+    piezoSensorValue = 0;
+}

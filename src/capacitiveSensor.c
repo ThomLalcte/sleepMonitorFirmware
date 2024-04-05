@@ -2,7 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 // #include "freertos/queue.h"
-// #include "driver/gptimer.h"
+#include "driver/gptimer.h"
 #include "driver/pulse_cnt.h"
 #include "soc/pcnt_struct.h"
 #include "driver/gpio.h"
@@ -10,10 +10,22 @@
 
 #define TAG "CapacitiveSensor"
 
+
 // counter definitions
 pcnt_unit_handle_t counterHandle;
 volatile uint32_t overflowCount = 0;
 pcnt_unit_config_t pcnt_config;
+uint32_t lastCapacity = 0;
+uint32_t capacityDiff = 0;
+uint32_t capacityDiffThreshold = 80000000/3/60;
+
+// timer definitions
+gptimer_handle_t gptimer = NULL;
+typedef struct
+{
+    uint64_t event_count;
+} example_queue_element_t;
+bool computeCapacityDiffFlag = false;
 
 static bool overflowHandler(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)
 {
@@ -80,19 +92,72 @@ void initcapacitiveGPIO()
   ESP_ERROR_CHECK(gpio_config(&io_conf));
 }
 
+static bool capacityTimerHandler(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
+{
+    computeCapacityDiffFlag = true;
+    return true;
+}
+
+void initDiffTimer()
+{
+    ESP_LOGI(TAG, "Initializing Alarm Timer");
+    // Initialize the alarm timer
+    gptimer_config_t timer_config = {
+        .clk_src = GPTIMER_CLK_SRC_DEFAULT,
+        .direction = GPTIMER_COUNT_UP,
+        .resolution_hz = 1 * 1000 * 1000, // 1MHz, 1 tick = 1us
+    };
+    ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer));
+
+    gptimer_alarm_config_t alarm_config = {
+        .reload_count = 0,                  // counter will reload with 0 on alarm event
+        .alarm_count = 1000000,             // period = 1s @resolution 1MHz
+        .flags.auto_reload_on_alarm = true, // enable auto-reload
+    };
+    ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer, &alarm_config));
+
+    gptimer_event_callbacks_t cbs = {
+        .on_alarm = capacityTimerHandler, // register user callback
+    };
+    ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
+    ESP_ERROR_CHECK(gptimer_enable(gptimer));
+    ESP_ERROR_CHECK(gptimer_start(gptimer));
+}
+
 int initCapacitiveSensor()
 {
   ESP_LOGI(TAG, "Starting capacitive sensor");
 
   initPCNT();
   initcapacitiveGPIO();
+  initDiffTimer();
 
   return 0;
 }
 
+void computeCapacityDiff()
+{
+  if (computeCapacityDiffFlag)
+  {
+    computeCapacityDiffFlag = false;
+    uint32_t capacity = getCapacitiveSensorValue();
+    capacityDiff = capacity - lastCapacity;
+    lastCapacity = capacity;
+  }
+}
+
+_Bool getTresholdCrossed() {
+  return capacityDiff < capacityDiffThreshold;
+}
+
+unsigned long getCapacityDiff()
+{
+  return capacityDiff;
+}
+
 void capacitiveSensorTask()
 {
-  vTaskDelay(1);
+  computeCapacityDiff();
 }
 
 unsigned long getCapacitiveSensorValue() {
@@ -100,3 +165,9 @@ unsigned long getCapacitiveSensorValue() {
   pcnt_unit_get_count(counterHandle, &capacityAmount);
   return capacityAmount + (overflowCount * pcnt_config.high_limit);
 }
+
+void resetCapacitiveSensorValue() {
+  overflowCount = 0;
+  pcnt_unit_clear_count(counterHandle);
+}
+

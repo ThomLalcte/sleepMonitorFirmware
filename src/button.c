@@ -41,7 +41,7 @@ void buttonTask()
     if (runButtonAction)
     {
         runButtonAction = 0;
-        ESP_LOGI(TAG, "Button pressed: running callback");
+        ESP_LOGI(TAG, "Button pressed->running callback");
         if (buttonActionCallback != NULL)
             (*buttonActionCallback)();
     }

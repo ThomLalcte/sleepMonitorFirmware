@@ -13,8 +13,6 @@
 #define piezoSampleBufferSize convFrameSize*4
 
 
-#define TAG "piezoSensor"
-
 void initPiezoSensor(TaskHandle_t* mainTaskHandle);
 void piezoSensorTask();
 void increasePiezoSensitivity();
@@ -22,5 +20,8 @@ void decreasePiezoSensitivity();
 void setPiezoSensitivity(short attenuation, unsigned short gain);
 
 void readPiezoSensor();
+
+unsigned long getPiezoSensorValue();
+void resetPiezoSensorValue();
 
 #endif

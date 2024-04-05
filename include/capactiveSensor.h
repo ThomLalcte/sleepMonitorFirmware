@@ -7,5 +7,9 @@
 int initCapacitiveSensor();
 void capacitiveSensorTask();
 unsigned long getCapacitiveSensorValue();
+void resetCapacitiveSensorValue();
+
+_Bool getTresholdCrossed();
+unsigned long getCapacityDiff();
 
 #endif

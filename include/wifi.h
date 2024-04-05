@@ -4,4 +4,6 @@
 void initWifi();
 void wifiTask();
 
+_Bool isWifiConnected();
+
 #endif

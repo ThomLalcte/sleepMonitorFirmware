@@ -10,11 +10,8 @@
 #include "lwip/err.h"          //light weight ip packets error handling
 #include "lwip/sys.h"          //system applications for light weight ip apps
 
-#include <sys/socket.h>
-
 int retry_num = 0;
-
-char pingedServer = 0;
+bool wifiConnected = 0;
 
 #define TAG "wifi"
 
@@ -44,7 +41,7 @@ static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_b
         break;
     case IP_EVENT_STA_GOT_IP:
         ESP_LOGI(TAG, "Wifi got IP");
-        pingedServer = 1;
+        wifiConnected = 1;
         break;
     default:
         break;
@@ -80,82 +77,22 @@ void wifi_connection()
     ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s  password:%s", WIFI_SSID, WIFI_PASSWORD);
 }
 
-void tcp_client(void)
-{
-    char tx_buffer[] = "ping";
-    char rx_buffer[128];
-    int addr_family = 0;
-    int ip_protocol = 0;
-
-    struct sockaddr_in dest_addr;
-    inet_pton(AF_INET, host, &dest_addr.sin_addr);
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(port);
-    addr_family = AF_INET;
-    ip_protocol = IPPROTO_IP;
-
-    int sock = socket(addr_family, SOCK_STREAM, ip_protocol);
-    if (sock < 0)
-    {
-        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-        return;
-    }
-
-    ESP_LOGI(TAG, "Socket created, connecting to %s:%d", host, port);
-
-    int err = connect(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-    if (err != 0)
-    {
-        ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
-        close(sock);
-        return;
-    }
-
-    ESP_LOGI(TAG, "Successfully connected");
-
-    while (1)
-    {
-        int err = send(sock, tx_buffer, strlen(tx_buffer), 0);
-        if (err < 0)
-        {
-            ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-            break;
-        }
-
-        int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-        // Error occurred during receiving
-        if (len < 0)
-        {
-            ESP_LOGE(TAG, "recv failed: errno %d", errno);
-            break;
-        }
-        // Data received
-        else
-        {
-            rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-            ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
-        }
-
-        if (sock != -1)
-        {
-            ESP_LOGE(TAG, "Shutting down socket and restarting...");
-            shutdown(sock, 0);
-            close(sock);
-            break;
-        }
-    }
-}
-
 void initWifi()
 {
     ESP_LOGI(TAG, "Initializing Wifi");
-    nvs_flash_init();
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
     wifi_connection();
 }
 
 void wifiTask() {
-    if (pingedServer == 1) {
-        pingedServer = 2;
-        tcp_client();
-    }
+    // if (pingedServer == 1) {
+    //     pingedServer = 2;
+    //     tcp_client();
+    // }
+}
+
+_Bool isWifiConnected()
+{
+    return wifiConnected;
 }
