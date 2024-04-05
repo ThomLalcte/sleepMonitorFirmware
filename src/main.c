@@ -38,9 +38,6 @@ void app_main()
     // Initialize the wakeupinator
     initWakeupinator();
 
-    initAlarm();
-    // setAlarmState(ALARM_PRIMED);
-
     while (!isWifiConnected())
     {
         vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -49,6 +46,9 @@ void app_main()
     initMQTT();
     
     initDataUpload();
+
+    initAlarm();
+    // setAlarmState(ALARM_PRIMED);
 
     initButton();
     setButtonPressedCallback(tempButtonCallback);

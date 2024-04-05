@@ -17,7 +17,6 @@ volatile uint32_t overflowCount = 0;
 pcnt_unit_config_t pcnt_config;
 uint32_t lastCapacity = 0;
 uint32_t capacityDiff = 0;
-uint32_t capacityDiffThreshold = 80000000/3/60;
 
 // timer definitions
 gptimer_handle_t gptimer = NULL;
@@ -158,6 +157,7 @@ unsigned long getCapacityDiff()
 void capacitiveSensorTask()
 {
   computeCapacityDiff();
+  // TODO: ADD MQTT PUBLISH IN/OUT OF BED STATUS <-----------------------------
 }
 
 unsigned long getCapacitiveSensorValue() {

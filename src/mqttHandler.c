@@ -1,10 +1,10 @@
 #include "mqttHandler.h"
 
 #include "esp_log.h"
-#include <secrets.h>
-#include <wifi.h>
-#include <capactiveSensor.h>
-#include <piezoSensor.h>
+#include "secrets.h"
+#include "wifi.h"
+#include "capactiveSensor.h"
+#include "piezoSensor.h"
 
 #include "esp_event.h"
 #include "esp_netif.h"
@@ -12,6 +12,12 @@
 esp_mqtt_client_handle_t clientHandle;
 
 #define TAG "mqttHandler"
+
+#define maxSubscriptions 10
+void (*subscribeCallbacks[maxSubscriptions])(char *payload, int payloadLength, char *topic);
+char *subscribedTopics[maxSubscriptions];
+int subscriptionCount = 0;
+
 
 static void log_error_if_nonzero(const char *message, int error_code)
 {
@@ -72,6 +78,13 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
+        for (int i = 0; i < subscriptionCount; i++)
+        {
+            if (strncmp(subscribedTopics[i], event->topic, event->topic_len) == 0)
+            {
+                subscribeCallbacks[i](event->data, event->data_len, event->topic);
+            }
+        }
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -112,11 +125,20 @@ static void initMQTTapp(void)
     esp_mqtt_client_start(clientHandle);
 }
 
-void sendMqttData(char* payload, char* topic)
+void sendMqttData(char *payload, char *topic)
 {
     ESP_LOGI(TAG, "Sending MQTT Data");
     int msg_id = esp_mqtt_client_publish(clientHandle, topic, payload, 0, 1, 0);
     ESP_LOGI(TAG, "sent publish done, msg_id=%d", msg_id);
+}
+
+void subscribeToTopic(char *topic, void (*callback)(char *payload, int payloadLength, char *topic))
+{
+    ESP_LOGI(TAG, "Subscribing to topic");
+    esp_mqtt_client_subscribe(clientHandle, topic, 1);
+    subscribeCallbacks[subscriptionCount] = callback;
+    subscribedTopics[subscriptionCount] = topic;
+    subscriptionCount++;
 }
 
 void initMQTT()
