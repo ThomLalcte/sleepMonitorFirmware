@@ -8,7 +8,6 @@
 #include "piezoSensor.h"
 #include "secrets.h"
 
-
 #define TAG "dataUpload"
 
 bool sendData = 0;
@@ -60,10 +59,10 @@ void uploadSensorData()
     char data[] = "{\"type\":\"%s\",\"value\":%lu,\"datatype\":\"int\"}";
     char dataBuffer[256];
     sprintf(dataBuffer, data, "capacity", capacityReading);
-    sendMqttData(dataBuffer, MQTT_TOPIC_CAPACITY);
+    sendMqttData(dataBuffer, MQTT_TOPIC_CAPACITY, 0);
 
     sprintf(dataBuffer, data, "piezo", piezoReading);
-    sendMqttData(dataBuffer, MQTT_TOPIC_PIEZO);
+    sendMqttData(dataBuffer, MQTT_TOPIC_PIEZO, 0);
 
     sendData = 0;
 }
@@ -72,8 +71,7 @@ void initDataUpload()
 {
     initSendTimer();
 
-    sendData = 1;
-
+    sendData = 0;
 }
 
 void dataUploadTask()

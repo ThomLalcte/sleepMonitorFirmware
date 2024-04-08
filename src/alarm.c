@@ -34,7 +34,7 @@ void alarmCallback(char *payload, int payloadLength, char *topic)
     if (strcmp(payloadCopy, "on") == 0)
     {
         setAlarmState(ALARM_PRIMED);
-        ESP_LOGI(TAG, "Alarm primed: threshold= %lu, lastDiff=%lu", capacityDiffThreshold, getCapacityDiff());
+        ESP_LOGI(TAG, "Alarm primed: threshold= %lu, lastDiff=%lu", getCapacitythreshold(), getCapacityDiff());
     }
     else if (strcmp(payloadCopy, "off") == 0)
     {
@@ -68,7 +68,7 @@ void alarmTask()
     case ALARM_OFF:
         break;
     case ALARM_PRIMED:
-        if (getTresholdCrossed())
+        if (getInBedStatus())
         {
             alarmState = ALARM_ON;
             startTime = time_us;
@@ -78,9 +78,9 @@ void alarmTask()
         break;
     case ALARM_ON:
         ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
-        if (!getTresholdCrossed())
+        if (!getInBedStatus())
         {
-            alarmState = ALARM_PREWAKE;
+            alarmState = ALARM_OFF;
             disableWakeupinator();
         }
         if ((time_us - startTime) > (180 * 1000000))

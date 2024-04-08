@@ -1,6 +1,7 @@
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "nvs_flash.h"
 
 #include "piezoSensor.h"
 #include "capactiveSensor.h"
@@ -24,6 +25,7 @@ void tempButtonCallback()
 
 void app_main() 
 {
+    ESP_ERROR_CHECK(nvs_flash_init());
 
     initWifi();
 

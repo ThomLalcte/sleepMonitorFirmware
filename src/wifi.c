@@ -6,7 +6,6 @@
 #include "esp_wifi.h"          //esp_wifi_init functions and wifi operations
 #include "esp_log.h"           //for showing logs
 #include "esp_event.h"         //for wifi event
-#include "nvs_flash.h"         //non volatile storage
 #include "lwip/err.h"          //light weight ip packets error handling
 #include "lwip/sys.h"          //system applications for light weight ip apps
 
@@ -80,7 +79,6 @@ void wifi_connection()
 void initWifi()
 {
     ESP_LOGI(TAG, "Initializing Wifi");
-    ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     wifi_connection();
 }

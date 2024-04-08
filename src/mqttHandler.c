@@ -125,10 +125,10 @@ static void initMQTTapp(void)
     esp_mqtt_client_start(clientHandle);
 }
 
-void sendMqttData(char *payload, char *topic)
+void sendMqttData(char *payload, char *topic, int retain)
 {
     ESP_LOGI(TAG, "Sending MQTT Data");
-    int msg_id = esp_mqtt_client_publish(clientHandle, topic, payload, 0, 1, 0);
+    int msg_id = esp_mqtt_client_publish(clientHandle, topic, payload, 0, 1, retain);
     ESP_LOGI(TAG, "sent publish done, msg_id=%d", msg_id);
 }
 

@@ -19,9 +19,9 @@ void increasePiezoSensitivity();
 void decreasePiezoSensitivity();
 void setPiezoSensitivity(short attenuation, unsigned short gain);
 
-void readPiezoSensor();
-
 unsigned long getPiezoSensorValue();
 void resetPiezoSensorValue();
+
+
 
 #endif
