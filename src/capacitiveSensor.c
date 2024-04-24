@@ -37,6 +37,7 @@ unsigned long lowCapacity = 40000000 / 3 / 60;
 unsigned long capacityDiffThreshold = 0;
 unsigned long capacityDiffHysteresis = 0;
 _Bool inBed = false;
+int presenceUpdateCounter = 0;
 
 void saveCalibrationValues()
 {
@@ -51,11 +52,12 @@ void saveCalibrationValues()
 
 void updateInBedStatus()
 {
-  if (esp_timer_get_time() < 1000000ULL * 30ULL)
+  if (presenceUpdateCounter < 3)
   {
+    presenceUpdateCounter++;
     return;
   }
-  if (getInBedStatus())
+  if (inBed)
   {
     if (capacityDiff > capacityDiffThreshold + capacityDiffHysteresis)
     {

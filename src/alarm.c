@@ -75,6 +75,11 @@ void alarmTask()
             enableWakeupinator();
             ESP_LOGI(TAG, "Alarm primed with startTime: %llu", startTime);
         }
+        else
+        {
+            alarmState = ALARM_OFF;
+            disableWakeupinator();
+        }
         break;
     case ALARM_ON:
         ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);

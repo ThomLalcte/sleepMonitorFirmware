@@ -110,6 +110,14 @@ static void initMQTTapp(void)
 {
     ESP_LOGI(TAG, "Connecting to MQTT Broker");
 
+        // register will message
+    struct last_will_t will = {
+        .topic = MQTT_TOPIC_WILL,
+        .msg = "{\"device\":\"SleepMonitor\", \"state\":\"offline\"}",
+        .qos = 1,
+        .retain = 1,
+    };
+
     esp_mqtt_client_config_t mqtt_cfg = {
         // PLAY AROUND WITH THESE SETTINGS
         .broker.address.transport = MQTT_TRANSPORT_OVER_TCP,
@@ -117,12 +125,17 @@ static void initMQTTapp(void)
         .broker.address.port = 1883,
         .credentials.authentication.password = MQTT_PASS,
         .credentials.username = MQTT_USER,
+        .session.last_will = will,
     };
 
     clientHandle = esp_mqtt_client_init(&mqtt_cfg);
     /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
     esp_mqtt_client_register_event(clientHandle, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
     esp_mqtt_client_start(clientHandle);
+
+    esp_mqtt_client_publish(clientHandle, MQTT_TOPIC_WILL, "{\"device\":\"SleepMonitor\", \"state\":\"online\"}", 0, 1, 1);
+
+    ESP_LOGI(TAG, "MQTT Client started");
 }
 
 void sendMqttData(char *payload, char *topic, int retain)
