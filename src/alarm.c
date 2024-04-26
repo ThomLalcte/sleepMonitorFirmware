@@ -73,6 +73,7 @@ void alarmTask()
             alarmState = ALARM_ON;
             startTime = time_us;
             enableWakeupinator();
+            setVibecheckLevel(0);
             ESP_LOGI(TAG, "Alarm primed with startTime: %llu", startTime);
         }
         else
@@ -88,11 +89,23 @@ void alarmTask()
             alarmState = ALARM_OFF;
             disableWakeupinator();
         }
-        if ((time_us - startTime) > (180 * 1000000))
+        if ((time_us - startTime) > (1 * 1000000)) {
+            setVibecheckLevel(1);
+            alarmState = ALARM_MORE_ON;
+        }
+        break;
+    case ALARM_MORE_ON:
+        ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
+        if (!getInBedStatus())
+        {
+            alarmState = ALARM_OFF;
+            disableWakeupinator();
+        }
+        if ((time_us - startTime) > (240 * 1000000))
         {
             alarmState = ALARM_FAILED;
             disableWakeupinator();
-            ESP_LOGI(TAG, "Alarm timed out after 180 seconds");
+            ESP_LOGI(TAG, "Alarm timed out after 240 seconds");
         }
         break;
     case ALARM_FAILED:

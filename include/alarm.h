@@ -8,6 +8,7 @@ enum alarmState_t
     ALARM_OFF,
     ALARM_PRIMED,
     ALARM_ON,
+    ALARM_MORE_ON,
     ALARM_FAILED,
     ALARM_PREWAKE,
 };
