@@ -34,11 +34,7 @@ void app_main()
     // Initialize the piezo sensor
     initPiezoSensor(&s_task_handle);
 
-    // Initialize the capacitive sensor
-    initCapacitiveSensor();
 
-    // Initialize the wakeupinator
-    initWakeupinator();
 
     while (!isWifiConnected())
     {
@@ -48,12 +44,18 @@ void app_main()
     initMQTT();
     
     initDataUpload();
+    
+    // Initialize the wakeupinator
+    initWakeupinator();
 
     initAlarm();
     // setAlarmState(ALARM_PRIMED);
 
     initButton();
     setButtonPressedCallback(tempButtonCallback);
+    
+    // Initialize the capacitive sensor
+    initCapacitiveSensor();
 
     while(1) {
 

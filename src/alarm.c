@@ -38,8 +38,9 @@ void alarmCallback(char *payload, int payloadLength, char *topic)
     }
     else if (strcmp(payloadCopy, "off") == 0)
     {
-        setAlarmState(ALARM_OFF);
         disableWakeupinator();
+        setAlarmState(ALARM_OFF);
+        ESP_LOGI(TAG, "Alarm off");
     }
     free(payloadCopy);
 }
@@ -54,7 +55,7 @@ void initAlarm()
 void alarmTask()
 {
     int64_t time_us = esp_timer_get_time();
-    if ((time_us - lastRunTime) > 1000000)
+    if ((time_us - lastRunTime) > 100000)
     {
         lastRunTime = time_us;
     }
@@ -83,13 +84,13 @@ void alarmTask()
         }
         break;
     case ALARM_ON:
-        ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
+        // ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
         if (!getInBedStatus())
         {
             alarmState = ALARM_OFF;
             disableWakeupinator();
         }
-        if ((time_us - startTime) > (1 * 1000000)) {
+        if ((time_us - startTime) > (120 * 1000000)) {
             setVibecheckLevel(1);
             alarmState = ALARM_MORE_ON;
         }

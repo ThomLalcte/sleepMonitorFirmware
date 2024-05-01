@@ -90,7 +90,9 @@ void disableWakeupinator()
     ESP_LOGV(TAG, "Disabling wakeupinator");
     wakeupinatorEnabled = false;
     ESP_ERROR_CHECK(gpio_set_level(motorPin, 0));
-    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
+    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
+    // ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+    vibecheckLevel = 0;
 }
 
 void wakeupinatorTask()
@@ -102,7 +104,7 @@ void wakeupinatorTask()
             nextRunTime = esp_timer_get_time() + cycleTime * 1000;
             if (state)
             {
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
+                // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
                 ESP_ERROR_CHECK(gpio_set_level(motorPin, 0));
             }
             else
@@ -110,17 +112,17 @@ void wakeupinatorTask()
                 switch (vibecheckLevel)
                 {
                 case 0:
-                    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
+                    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
                     ESP_ERROR_CHECK(gpio_set_level(motorPin, 1));
                     break;
                 case 1:
-                    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1 << 9));
+                    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1 << 9));
                     ESP_ERROR_CHECK(gpio_set_level(motorPin, 1));
                     break;
                 }
             }
         }
         state = !state;
-        ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+        // ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
     }
 }

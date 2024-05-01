@@ -42,6 +42,7 @@ int presenceUpdateCounter = 0;
 void saveCalibrationValues()
 {
   ESP_LOGI(TAG, "Saving calibration values: highCapacity: %lu, lowCapacity: %lu", highCapacity, lowCapacity);
+  
   nvs_handle_t nvsHandle;
   ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvsHandle));
   ESP_ERROR_CHECK(nvs_set_u32(nvsHandle, "highCapacity", highCapacity));
@@ -84,14 +85,12 @@ void updateInBedStatus()
 
 void computeCapacityDiff()
 {
-  if (computeCapacityDiffFlag)
-  {
-    computeCapacityDiffFlag = false;
-    uint32_t capacity = getCapacitiveSensorValue();
-    capacityDiff = capacity - lastCapacity;
-    lastCapacity = capacity;
-    updateInBedStatus();
-  }
+  computeCapacityDiffFlag = false;
+  uint32_t capacity = getCapacitiveSensorValue();
+  capacityDiff = capacity - lastCapacity;
+  lastCapacity = capacity;
+  updateInBedStatus();
+  ESP_LOGD(TAG, "Capacity: %lu, CapacityDiff: %lu", capacity, capacityDiff);
 }
 
 void computeThresholds()
@@ -208,7 +207,7 @@ static bool capacityTimerHandler(gptimer_handle_t timer, const gptimer_alarm_eve
 
 void initDiffTimer()
 {
-  ESP_LOGI(TAG, "Initializing Alarm Timer");
+  ESP_LOGI(TAG, "Initializing diff Timer");
   // Initialize the alarm timer
   gptimer_config_t timer_config = {
       .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -253,12 +252,17 @@ int initCapacitiveSensor()
   initcapacitiveGPIO();
   initDiffTimer();
 
+  ESP_LOGI(TAG, "Capacitive sensor done initializing");
+
   return 0;
 }
 
 void capacitiveSensorTask()
 {
-  computeCapacityDiff();
+  if (computeCapacityDiffFlag)
+  {
+    computeCapacityDiff();
+  }
   updateCalibration();
 }
 
