@@ -5,12 +5,14 @@
 
 #include "piezoSensor.h"
 #include "capactiveSensor.h"
+#include "presenceDetection.h"
 #include "wakeupinator.h"
 #include "alarm.h"
 #include "button.h"
 #include "wifi.h"
 #include "mqttHandler.h"
 #include "dataUpload.h"
+#include "console.h"
 
 #include "esp_log.h"
 
@@ -23,9 +25,19 @@ void tempButtonCallback()
     setAlarmState(ALARM_PRIMED);
 }
 
+static void initialize_nvs(void)
+{
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK( nvs_flash_erase() );
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+}
+
 void app_main() 
 {
-    ESP_ERROR_CHECK(nvs_flash_init());
+    initialize_nvs();
 
     initWifi();
 
@@ -33,7 +45,6 @@ void app_main()
 
     // Initialize the piezo sensor
     initPiezoSensor(&s_task_handle);
-
 
 
     while (!isWifiConnected())
@@ -57,6 +68,12 @@ void app_main()
     // Initialize the capacitive sensor
     initCapacitiveSensor();
 
+    // Initialize the presence detection
+    initPresenceDetection();
+
+    // Start the console task
+    initConsole();
+
     while(1) {
 
         wifiTask();
@@ -65,6 +82,8 @@ void app_main()
 
         capacitiveSensorTask();
 
+        presenceDetectionTask();
+
         wakeupinatorTask();
 
         alarmTask();
@@ -72,6 +91,8 @@ void app_main()
         dataUploadTask();
 
         buttonTask();
+
+        consoleTask();
 
         vTaskDelay(1);
     }

@@ -3,7 +3,8 @@
 #include "esp_adc/adc_continuous.h"
 #include "driver/gpio.h"
 #include "math.h"
-#include "capactiveSensor.h"
+// #include "capactiveSensor.h"
+#include "presenceDetection.h"
 
 #define TAG "piezoSensor"
 
@@ -91,8 +92,6 @@ void initPiezoGPIOs()
     ESP_ERROR_CHECK(gpio_set_pull_mode(PIEZO_ATN10K_PIN, GPIO_PULLDOWN_ONLY));
 }
 
-unsigned char sillyCounter = 0;
-
 void readPiezoSensor()
 {
     uint32_t readCount = 0;
@@ -114,12 +113,6 @@ void readPiezoSensor()
     if (bufferSum > 100)
     {
         notifyMovement();
-    }
-    // sillyCounter++;
-    if (sillyCounter % 100 == 1)
-    {
-        ESP_LOGI(TAG, "Piezo sensor value: %lu", bufferSum);
-        sillyCounter = 0;
     }
     bufferSum *= pow10(-piezoParameters.attenuation);
     bufferSum *= pow10(piezoParameters.gain);

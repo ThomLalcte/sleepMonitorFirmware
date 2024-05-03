@@ -2,6 +2,7 @@
 #include "stdbool.h"
 #include "esp_log.h"
 #include "capactiveSensor.h"
+#include "presenceDetection.h"
 #include "esp_timer.h"
 #include "mqttHandler.h"
 #include "secrets.h"
