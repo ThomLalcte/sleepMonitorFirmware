@@ -22,6 +22,19 @@ esp_console_cmd_t capacityDiffCmd = {
     .func = &printCapacityDiff,
 };
 
+static int printCapacityTotal(int argc, char **argv)
+{
+    ESP_LOGI(TAG, "Total capacity: %lu", getCapacitiveSensorValue());
+    return 0;
+}
+
+esp_console_cmd_t capacityTotalCmd = {
+    .command = "getCapacityTotal",
+    .help = "Get the total capacity",
+    .hint = NULL,
+    .func = &printCapacityTotal,
+};
+
 static int printInBedStatus(int argc, char **argv)
 {
     ESP_LOGI(TAG, "In bed status: %d", getInBedStatus());
@@ -140,6 +153,7 @@ void initConsole()
     /* Register commands */
     esp_console_register_help_command();
     esp_console_cmd_register(&capacityDiffCmd);
+    esp_console_cmd_register(&capacityTotalCmd);
     esp_console_cmd_register(&inBedStatusCmd);
     esp_console_cmd_register(&capacityThresholdCmd);
     esp_console_cmd_register(&inbedCapacitanceCmd);

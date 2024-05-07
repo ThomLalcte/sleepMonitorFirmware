@@ -110,10 +110,10 @@ void readPiezoSensor()
     {
         decreasePiezoSensitivity();
     }
-    if (bufferSum > 100)
-    {
-        notifyMovement();
-    }
+    // if (bufferSum > 100)
+    // {
+    //     notifyMovement();
+    // }
     bufferSum *= pow10(-piezoParameters.attenuation);
     bufferSum *= pow10(piezoParameters.gain);
     piezoSensorValue += bufferSum;

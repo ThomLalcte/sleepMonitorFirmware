@@ -19,7 +19,7 @@ unsigned long lowCapacity = 200000;
 unsigned long capacityDiffThreshold = 0;
 unsigned long capacityDiffHysteresis = 0;
 _Bool inBed = false;
-int presenceUpdateCounter = 0;
+_Bool movementFlag = false;
 
 void saveCalibrationValues()
 {
@@ -70,7 +70,7 @@ void updateCalibration()
   {
     if (!getInBedStatus() && time_us - lastCalibration > 1000000ULL * 60ULL * 60ULL)
     {
-      highCapacity = (highCapacity * 3 + getCapacityDiff()) / 4;
+      highCapacity = (highCapacity * 3 + getCapacityDiffMean()) / 4;
       if (highCapacity > 500000)
       {
         highCapacity = 500000;
@@ -83,7 +83,7 @@ void updateCalibration()
   {
     if (getInBedStatus() && time_us - lastCalibration > 1000000ULL * 60ULL)
     {
-      lowCapacity = (lowCapacity * 3 + getCapacityDiff()) / 4;
+      lowCapacity = (lowCapacity * 3 + getCapacityDiffMean()) / 4;
       if (lowCapacity < 100000)
       {
         lowCapacity = 100000;
@@ -96,24 +96,28 @@ void updateCalibration()
 
 void notifyMovement()
 {
-  ESP_LOGI(TAG, "Movement detected");
+  // ESP_LOGI(TAG, "Movement detected");
   lastMovement = esp_timer_get_time();
+  movementFlag = true;
 }
 
 void updateInBedStatus()
 {
-  if (presenceUpdateCounter < 3)
-  {
-    presenceUpdateCounter++;
-    return;
-  }
-  if (getPiezoSensorValue() < 30)
-    return;
+  // if (!movementFlag && (esp_timer_get_time() - lastMovement) < 1000000ULL * 5ULL)
+  // {
+  //   return;
+  // }
+  // else
+  // {
+  //   ESP_LOGD(TAG, "Piezo detected movement: %lu\nUpdating inBed status", getPiezoSensorValue());
+  //   movementFlag = false;
+  // }
+
   if (inBed)
   {
     if (getCapacityDiff() > capacityDiffThreshold + capacityDiffHysteresis)
     {
-      ESP_LOGI(TAG, "Out of bed");
+      ESP_LOGI(TAG, "Out of bed (%lu)", getCapacityDiff());
       char payload[100];
       sprintf(payload, "{\"inBed\": false, \"capacity\":%lu}", getCapacityDiff());
       sendMqttData(payload, MQTT_TOPIC_WAKEUP, 1);
@@ -125,7 +129,7 @@ void updateInBedStatus()
   {
     if (getCapacityDiff() < capacityDiffThreshold - capacityDiffHysteresis)
     {
-      ESP_LOGI(TAG, "In bed");
+      ESP_LOGI(TAG, "In bed (%lu)", getCapacityDiff());
       char payload[100];
       sprintf(payload, "{\"inBed\": true, \"capacity\":%lu}", getCapacityDiff());
       sendMqttData(payload, MQTT_TOPIC_WAKEUP, 1);

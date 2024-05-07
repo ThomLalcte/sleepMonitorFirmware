@@ -39,34 +39,36 @@ void app_main()
 {
     initialize_nvs();
 
+    // Initialize the wakeupinator
+    initWakeupinator();
+
     initWifi();
-
-    s_task_handle = xTaskGetCurrentTaskHandle();
-
-    // Initialize the piezo sensor
-    initPiezoSensor(&s_task_handle);
-
 
     while (!isWifiConnected())
     {
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
+    // Initialize the piezo sensor
+    s_task_handle = xTaskGetCurrentTaskHandle();
+    initPiezoSensor(&s_task_handle);
+
+    // Initialize the capacitive sensor
+    initCapacitiveSensor();
+
+    // Initialize the MQTT
     initMQTT();
     
+    // Initialize the data upload
     initDataUpload();
     
-    // Initialize the wakeupinator
-    initWakeupinator();
 
-    initAlarm();
-    // setAlarmState(ALARM_PRIMED);
-
+    // Initialize the button
     initButton();
     setButtonPressedCallback(tempButtonCallback);
     
-    // Initialize the capacitive sensor
-    initCapacitiveSensor();
+    // Initialize the alarm
+    initAlarm();
 
     // Initialize the presence detection
     initPresenceDetection();
@@ -94,6 +96,6 @@ void app_main()
 
         consoleTask();
 
-        vTaskDelay(1);
+        vTaskDelay(10);
     }
 }

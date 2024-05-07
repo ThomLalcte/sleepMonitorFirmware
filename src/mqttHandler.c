@@ -4,7 +4,7 @@
 #include "secrets.h"
 #include "wifi.h"
 #include "capactiveSensor.h"
-#include "piezoSensor.h"
+// #include "piezoSensor.h"
 
 #include "esp_event.h"
 #include "esp_netif.h"
@@ -141,14 +141,19 @@ static void initMQTTapp(void)
 void sendMqttData(char *payload, char *topic, int retain)
 {
     ESP_LOGI(TAG, "Sending MQTT Data");
+    
+    stopCapacitiveSensor();
     int msg_id = esp_mqtt_client_publish(clientHandle, topic, payload, 0, 1, retain);
+    startCapacitiveSensor();
     ESP_LOGI(TAG, "sent publish done, msg_id=%d", msg_id);
 }
 
 void subscribeToTopic(char *topic, void (*callback)(char *payload, int payloadLength, char *topic))
 {
     ESP_LOGI(TAG, "Subscribing to topic");
+    stopCapacitiveSensor();
     esp_mqtt_client_subscribe(clientHandle, topic, 1);
+    startCapacitiveSensor();
     subscribeCallbacks[subscriptionCount] = callback;
     subscribedTopics[subscriptionCount] = topic;
     subscriptionCount++;

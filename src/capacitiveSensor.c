@@ -21,6 +21,7 @@ volatile uint32_t overflowCount = 0;
 pcnt_unit_config_t pcnt_config;
 uint32_t lastCapacity = 0;
 uint32_t capacityDiff = 0;
+uint32_t capacityDiffMean = 0;
 
 // timer definitions
 gptimer_handle_t gptimer = NULL;
@@ -36,6 +37,7 @@ void computeCapacityDiff()
   uint32_t capacity = getCapacitiveSensorValue();
   capacityDiff = capacity - lastCapacity;
   lastCapacity = capacity;
+  capacityDiffMean = (capacityDiffMean * (capacityDiffMeanFactor - 1.0) + capacityDiff) / capacityDiffMeanFactor;
   ESP_LOGD(TAG, "Capacity: %lu, CapacityDiff: %lu", capacity, capacityDiff);
 }
 
@@ -111,6 +113,7 @@ static bool capacityTimerHandler(gptimer_handle_t timer, const gptimer_alarm_eve
 void initDiffTimer()
 {
   ESP_LOGI(TAG, "Initializing diff Timer");
+
   // Initialize the alarm timer
   gptimer_config_t timer_config = {
       .clk_src = GPTIMER_CLK_SRC_DEFAULT,
@@ -132,6 +135,8 @@ void initDiffTimer()
   ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer, &cbs, NULL));
   ESP_ERROR_CHECK(gptimer_enable(gptimer));
   ESP_ERROR_CHECK(gptimer_start(gptimer));
+
+  ESP_LOGI(TAG, "Diff Timer initialized");
 }
 
 int initCapacitiveSensor()
@@ -157,6 +162,22 @@ void capacitiveSensorTask()
   }
 }
 
+void stopCapacitiveSensor()
+{
+  ESP_LOGI(TAG, "Stopping capacitive sensor (%lu)", getCapacitiveSensorValue());
+  ESP_ERROR_CHECK(gptimer_stop(gptimer));
+  ESP_ERROR_CHECK(pcnt_unit_stop(counterHandle));
+  ESP_LOGI(TAG, "Capacitive sensor stopped (%lu)", getCapacitiveSensorValue());
+}
+
+void startCapacitiveSensor()
+{
+  ESP_LOGI(TAG, "Starting capacitive sensor (%lu)", getCapacitiveSensorValue());
+  ESP_ERROR_CHECK(gptimer_start(gptimer));
+  ESP_ERROR_CHECK(pcnt_unit_start(counterHandle));
+  ESP_LOGI(TAG, "Capacitive sensor started (%lu)", getCapacitiveSensorValue());
+}
+
 unsigned long getCapacityDiff()
 {
   return capacityDiff;
@@ -167,6 +188,11 @@ unsigned long getCapacitiveSensorValue()
   int capacityAmount = 0;
   pcnt_unit_get_count(counterHandle, &capacityAmount);
   return capacityAmount + (overflowCount * pcnt_config.high_limit);
+}
+
+unsigned long getCapacityDiffMean()
+{
+  return capacityDiffMean;
 }
 
 void resetCapacitiveSensorValue()
