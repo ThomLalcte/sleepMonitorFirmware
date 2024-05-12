@@ -19,9 +19,9 @@
 pcnt_unit_handle_t counterHandle;
 volatile uint32_t overflowCount = 0;
 pcnt_unit_config_t pcnt_config;
-uint32_t lastCapacity = 0;
-uint32_t capacityDiff = 0;
-uint32_t capacityDiffMean = 0;
+int32_t lastCapacity = 0;
+int32_t capacityDiff = 0;
+int32_t capacityDiffMean = 0;
 
 // timer definitions
 gptimer_handle_t gptimer = NULL;
@@ -33,7 +33,7 @@ bool computeCapacityDiffFlag = false;
 
 void computeCapacityDiff()
 {
-  uint32_t capacity = getCapacitiveSensorValue();
+  int32_t capacity = getCapacitiveSensorValue();
   capacityDiff = capacity - lastCapacity;
   capacityDiffMean = (capacityDiffMean * ((1 << capacityDiffMeanFactor) - 1) + capacityDiff) >> capacityDiffMeanFactor;
   if (capacityDiff > (capacityDiffMean * 3))
@@ -184,19 +184,19 @@ void startCapacitiveSensor()
   ESP_LOGI(TAG, "Capacitive sensor started (%lu)", getCapacitiveSensorValue());
 }
 
-unsigned long getCapacityDiff()
+int32_t getCapacityDiff()
 {
   return capacityDiff;
 }
 
-unsigned long getCapacitiveSensorValue()
+int32_t getCapacitiveSensorValue()
 {
   int capacityAmount = 0;
   pcnt_unit_get_count(counterHandle, &capacityAmount);
   return capacityAmount + (overflowCount * pcnt_config.high_limit);
 }
 
-unsigned long getCapacityDiffMean()
+int32_t getCapacityDiffMean()
 {
   return capacityDiffMean;
 }
