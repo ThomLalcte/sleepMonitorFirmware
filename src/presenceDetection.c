@@ -23,20 +23,29 @@ _Bool movementFlag = false;
 
 void saveCalibrationValues()
 {
-  ESP_LOGI(TAG, "Saving calibration values: highCapacity: %lu, lowCapacity: %lu", highCapacity, lowCapacity);
+  ESP_LOGI(TAG, "Saving calibration values: highCapacity: %lu, lowCapacity: %lu, capacityDiffThreshold: %lu, capacityDiffHysteresis: %lu", highCapacity, lowCapacity, capacityDiffThreshold, capacityDiffHysteresis);
 
   nvs_handle_t nvsHandle;
   ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvsHandle));
-  ESP_ERROR_CHECK(nvs_set_u32(nvsHandle, "highCapacity", highCapacity));
-  ESP_ERROR_CHECK(nvs_set_u32(nvsHandle, "lowCapacity", lowCapacity));
+  ESP_ERROR_CHECK(nvs_set_u32(nvsHandle, HIGH_THRESHOLD_NVS_KEY, highCapacity));
+  ESP_ERROR_CHECK(nvs_set_u32(nvsHandle, LOW_THRESHOLD_NVS_KEY, lowCapacity));
   ESP_ERROR_CHECK(nvs_commit(nvsHandle));
   nvs_close(nvsHandle);
 }
 
 void computeThresholds()
 {
-  capacityDiffHysteresis = (highCapacity - lowCapacity) / 4;
-  capacityDiffThreshold = (highCapacity + lowCapacity + capacityDiffHysteresis) / 2;
+  capacityDiffHysteresis = (highCapacity - lowCapacity) >> 2;
+  capacityDiffThreshold = (highCapacity + lowCapacity + capacityDiffHysteresis) >> 1;
+
+  if (capacityDiffThreshold > highCapacity)
+  {
+    ESP_LOGE(TAG, "Threshold is higher than highCapacity: %lu > %lu", capacityDiffThreshold, highCapacity);
+  }
+  if (capacityDiffThreshold < lowCapacity)
+  {
+    ESP_LOGE(TAG, "Threshold is lower than lowCapacity: %lu < %lu", capacityDiffThreshold, lowCapacity);
+  }
 }
 
 unsigned long getInbedCapacitance()
@@ -70,10 +79,14 @@ void updateCalibration()
   {
     if (!getInBedStatus() && time_us - lastCalibration > 1000000ULL * 60ULL * 60ULL)
     {
-      highCapacity = (highCapacity * 3 + getCapacityDiffMean()) / 4;
+      highCapacity = (highCapacity * 3 + getCapacityDiffMean()) >> 2;
       if (highCapacity > 500000)
       {
         highCapacity = 500000;
+      }
+      else if (highCapacity < lowCapacity)
+      {
+        ESP_LOGE(TAG, "High capacity is lower than low capacity: %lu < %lu", highCapacity, lowCapacity);
       }
       computeThresholds();
       lastCalibration = time_us;
@@ -83,10 +96,14 @@ void updateCalibration()
   {
     if (getInBedStatus() && time_us - lastCalibration > 1000000ULL * 60ULL)
     {
-      lowCapacity = (lowCapacity * 3 + getCapacityDiffMean()) / 4;
+      lowCapacity = (lowCapacity * 3 + getCapacityDiffMean()) >> 2;
       if (lowCapacity < 100000)
       {
         lowCapacity = 100000;
+      }
+      else if (lowCapacity > highCapacity)
+      {
+        ESP_LOGE(TAG, "Low capacity is higher than high capacity: %lu > %lu", lowCapacity, highCapacity);
       }
       computeThresholds();
       lastCalibration = time_us;
@@ -155,8 +172,8 @@ void initPresenceDetection()
   // read the threshold values from the NVS
   nvs_handle_t nvsHandle;
   ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvsHandle));
-  ESP_ERROR_CHECK_WITHOUT_ABORT(nvs_get_u32(nvsHandle, "highCapacity", &highCapacity));
-  ESP_ERROR_CHECK_WITHOUT_ABORT(nvs_get_u32(nvsHandle, "lowCapacity", &lowCapacity));
+  ESP_ERROR_CHECK_WITHOUT_ABORT(nvs_get_u32(nvsHandle, HIGH_THRESHOLD_NVS_KEY, &highCapacity));
+  ESP_ERROR_CHECK_WITHOUT_ABORT(nvs_get_u32(nvsHandle, LOW_THRESHOLD_NVS_KEY, &lowCapacity));
   nvs_close(nvsHandle);
 
   computeThresholds();

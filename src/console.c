@@ -5,6 +5,8 @@
 #include "piezoSensor.h"
 #include "capactiveSensor.h"
 #include "presenceDetection.h"
+#include "timeSync.h"
+#include "alarm.h"
 
 static const char *TAG = "console";
 
@@ -140,6 +142,33 @@ esp_console_cmd_t piezoValueCmd = {
     .func = &printPiezoValue,
 };
 
+static int printTime(int argc, char **argv)
+{
+    ESP_LOGI(TAG, "Time: %llu", getTime());
+    return 0;
+}
+
+esp_console_cmd_t timeCmd = {
+    .command = "getTime",
+    .help = "Get the current time",
+    .hint = NULL,
+    .func = &printTime,
+};
+
+static int getNextAlarmCMD(int argc, char **argv)
+{
+    ESP_LOGI(TAG, "Next alarm: %lli", getNextAlarm());
+    ESP_LOGI(TAG, "Next alarm strength: %d", getNextAlarmStrengh());
+    return 0;
+}
+
+esp_console_cmd_t nextAlarmCmd = {
+    .command = "getNextAlarm",
+    .help = "Get the next alarm",
+    .hint = NULL,
+    .func = &getNextAlarmCMD,
+};
+
 void initConsole()
 {
     ESP_LOGI(TAG, "Initializing console");
@@ -161,6 +190,8 @@ void initConsole()
     esp_console_cmd_register(&setInbedCapacitanceCmd);
     esp_console_cmd_register(&setOutOfBedCapacitanceCmd);
     esp_console_cmd_register(&piezoValueCmd);
+    esp_console_cmd_register(&timeCmd);
+    esp_console_cmd_register(&nextAlarmCmd);
 
 
     esp_console_dev_uart_config_t hw_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();

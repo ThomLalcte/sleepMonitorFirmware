@@ -31,14 +31,20 @@ typedef struct
 } example_queue_element_t;
 bool computeCapacityDiffFlag = false;
 
-
 void computeCapacityDiff()
 {
   uint32_t capacity = getCapacitiveSensorValue();
   capacityDiff = capacity - lastCapacity;
+  capacityDiffMean = (capacityDiffMean * ((1 << capacityDiffMeanFactor) - 1) + capacityDiff) >> capacityDiffMeanFactor;
+  if (capacityDiff > (capacityDiffMean * 3))
+  {
+    ESP_LOGE(TAG, "Capacity diff too high | capacity: %lu | lastCapacity: %lu | diff: %lu | diffMean: %lu", capacity, lastCapacity, capacityDiff, capacityDiffMean);
+  }
+  else if (capacityDiff * 3 < capacityDiffMean)
+  {
+    ESP_LOGE(TAG, "Capacity diff mean too high | capacity: %lu | lastCapacity: %lu | diff: %lu | diffMean: %lu", capacity, lastCapacity, capacityDiff, capacityDiffMean);
+  }
   lastCapacity = capacity;
-  capacityDiffMean = (capacityDiffMean * (capacityDiffMeanFactor - 1.0) + capacityDiff) / capacityDiffMeanFactor;
-  ESP_LOGD(TAG, "Capacity: %lu, CapacityDiff: %lu", capacity, capacityDiff);
 }
 
 static bool overflowHandler(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)
@@ -54,6 +60,7 @@ void initPCNT()
   pcnt_config.low_limit = -0x8000;
   pcnt_config.intr_priority = 0;
   pcnt_config.flags.accum_count = false;
+  
   // pcnt_config.flags.accum_count = true;
   ESP_ERROR_CHECK(pcnt_new_unit(&pcnt_config, &counterHandle));
 
@@ -76,7 +83,7 @@ void initPCNT()
   ESP_ERROR_CHECK(pcnt_unit_register_event_callbacks(counterHandle, &cbs, NULL));
 
   pcnt_glitch_filter_config_t glitch_filter_config = {
-      .max_glitch_ns = 10,
+      .max_glitch_ns = 1500,
   };
   ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(counterHandle, &glitch_filter_config));
 
@@ -143,7 +150,6 @@ int initCapacitiveSensor()
 {
   ESP_LOGI(TAG, "Starting capacitive sensor");
 
-
   initPCNT();
   initcapacitiveGPIO();
   initDiffTimer();
@@ -200,4 +206,3 @@ void resetCapacitiveSensorValue()
   overflowCount = 0;
   pcnt_unit_clear_count(counterHandle);
 }
-

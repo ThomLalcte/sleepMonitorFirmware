@@ -80,14 +80,14 @@ void initWakeupinator()
 
 void enableWakeupinator()
 {
-    ESP_LOGV(TAG, "Enabling wakeupinator");
+    ESP_LOGI(TAG, "Enabling wakeupinator");
     wakeupinatorEnabled = true;
     nextRunTime = esp_timer_get_time() + cycleTime * 1000;
 }
 
 void disableWakeupinator()
 {
-    ESP_LOGV(TAG, "Disabling wakeupinator");
+    ESP_LOGI(TAG, "Disabling wakeupinator");
     wakeupinatorEnabled = false;
     ESP_ERROR_CHECK(gpio_set_level(motorPin, 0));
     // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));

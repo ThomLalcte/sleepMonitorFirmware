@@ -39,16 +39,16 @@ static void log_error_if_nonzero(const char *message, int error_code)
  */
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
+    ESP_LOGV(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
     esp_mqtt_event_handle_t event = event_data;
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
     switch ((esp_mqtt_event_id_t)event_id)
     {
     case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        ESP_LOGV(TAG, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
-        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+        ESP_LOGV(TAG, "sent publish successful, msg_id=%d", msg_id);
 
         msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
@@ -142,18 +142,18 @@ void sendMqttData(char *payload, char *topic, int retain)
 {
     ESP_LOGI(TAG, "Sending MQTT Data");
     
-    stopCapacitiveSensor();
+    // stopCapacitiveSensor();
     int msg_id = esp_mqtt_client_publish(clientHandle, topic, payload, 0, 1, retain);
-    startCapacitiveSensor();
+    // startCapacitiveSensor();
     ESP_LOGI(TAG, "sent publish done, msg_id=%d", msg_id);
 }
 
 void subscribeToTopic(char *topic, void (*callback)(char *payload, int payloadLength, char *topic))
 {
     ESP_LOGI(TAG, "Subscribing to topic");
-    stopCapacitiveSensor();
+    // stopCapacitiveSensor();
     esp_mqtt_client_subscribe(clientHandle, topic, 1);
-    startCapacitiveSensor();
+    // startCapacitiveSensor();
     subscribeCallbacks[subscriptionCount] = callback;
     subscribedTopics[subscriptionCount] = topic;
     subscriptionCount++;

@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+#define HIGH_THRESHOLD_NVS_KEY "highCapacity"
+#define LOW_THRESHOLD_NVS_KEY "lowCapacity"
+
 void initPresenceDetection();
 void presenceDetectionTask();
 void notifyMovement();

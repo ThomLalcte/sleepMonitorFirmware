@@ -13,6 +13,7 @@
 #include "mqttHandler.h"
 #include "dataUpload.h"
 #include "console.h"
+#include "timeSync.h"
 
 #include "esp_log.h"
 
@@ -35,6 +36,8 @@ static void initialize_nvs(void)
     ESP_ERROR_CHECK(err);
 }
 
+
+
 void app_main() 
 {
     initialize_nvs();
@@ -55,6 +58,9 @@ void app_main()
 
     // Initialize the capacitive sensor
     initCapacitiveSensor();
+
+    // Start the time sync
+    initializeSNTP();
 
     // Initialize the MQTT
     initMQTT();
@@ -95,6 +101,8 @@ void app_main()
         buttonTask();
 
         consoleTask();
+
+        // ESP_LOGI("Main", "Epoch time: %lld", getTime());
 
         vTaskDelay(10);
     }

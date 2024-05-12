@@ -83,11 +83,9 @@ void initWifi()
     wifi_connection();
 }
 
-void wifiTask() {
-    // if (pingedServer == 1) {
-    //     pingedServer = 2;
-    //     tcp_client();
-    // }
+void wifiTask()
+{
+    // TODO: Implement a task that checks if the wifi is connected
 }
 
 _Bool isWifiConnected()

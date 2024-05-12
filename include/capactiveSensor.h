@@ -3,7 +3,7 @@
 
 #define pulsePin 17
 #define oscilatorPin 13
-#define capacityDiffMeanFactor 10.0
+#define capacityDiffMeanFactor 3
 
 int initCapacitiveSensor();
 void capacitiveSensorTask();
