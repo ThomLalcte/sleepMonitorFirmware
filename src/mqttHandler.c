@@ -143,7 +143,10 @@ void sendMqttData(char *payload, char *topic, int retain)
     ESP_LOGI(TAG, "Sending MQTT Data");
     
     // stopCapacitiveSensor();
+    // vTaskDelay(10 / portTICK_PERIOD_MS);
     int msg_id = esp_mqtt_client_publish(clientHandle, topic, payload, 0, 1, retain);
+    // wait for the message to be sent
+    // vTaskDelay(100 / portTICK_PERIOD_MS);
     // startCapacitiveSensor();
     ESP_LOGI(TAG, "sent publish done, msg_id=%d", msg_id);
 }
@@ -152,7 +155,9 @@ void subscribeToTopic(char *topic, void (*callback)(char *payload, int payloadLe
 {
     ESP_LOGI(TAG, "Subscribing to topic");
     // stopCapacitiveSensor();
+    // vTaskDelay(10 / portTICK_PERIOD_MS);
     esp_mqtt_client_subscribe(clientHandle, topic, 1);
+    // vTaskDelay(100 / portTICK_PERIOD_MS);
     // startCapacitiveSensor();
     subscribeCallbacks[subscriptionCount] = callback;
     subscribedTopics[subscriptionCount] = topic;

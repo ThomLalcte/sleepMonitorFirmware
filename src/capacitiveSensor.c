@@ -19,9 +19,9 @@
 pcnt_unit_handle_t counterHandle;
 volatile uint32_t overflowCount = 0;
 pcnt_unit_config_t pcnt_config;
-int32_t lastCapacity = 0;
-int32_t capacityDiff = 0;
-int32_t capacityDiffMean = 0;
+static int32_t lastCapacity = 0;
+static int32_t capacityDiff = 0;
+static int32_t capacityDiffMean = 0;
 
 // timer definitions
 gptimer_handle_t gptimer = NULL;
@@ -31,18 +31,23 @@ typedef struct
 } example_queue_element_t;
 bool computeCapacityDiffFlag = false;
 
+// 263653
+// 46598801
+// 4248632148
+
 void computeCapacityDiff()
 {
   int32_t capacity = getCapacitiveSensorValue();
   capacityDiff = capacity - lastCapacity;
-  capacityDiffMean = (capacityDiffMean * ((1 << capacityDiffMeanFactor) - 1) + capacityDiff) >> capacityDiffMeanFactor;
+  // capacityDiffMean = (capacityDiffMean * ((1 << capacityDiffMeanFactor) - 1) + capacityDiff) >> capacityDiffMeanFactor;
+  capacityDiffMean = capacityDiff;
   if (capacityDiff > (capacityDiffMean * 3))
   {
-    ESP_LOGE(TAG, "Capacity diff too high | capacity: %lu | lastCapacity: %lu | diff: %lu | diffMean: %lu", capacity, lastCapacity, capacityDiff, capacityDiffMean);
+    ESP_LOGE(TAG, "Capacity diff too high | capacity: %li | lastCapacity: %li | diff: %li | diffMean: %li", capacity, lastCapacity, capacityDiff, capacityDiffMean);
   }
   else if (capacityDiff * 3 < capacityDiffMean)
   {
-    ESP_LOGE(TAG, "Capacity diff mean too high | capacity: %lu | lastCapacity: %lu | diff: %lu | diffMean: %lu", capacity, lastCapacity, capacityDiff, capacityDiffMean);
+    ESP_LOGE(TAG, "Capacity diff mean too high | capacity: %li | lastCapacity: %li | diff: %li | diffMean: %li", capacity, lastCapacity, capacityDiff, capacityDiffMean);
   }
   lastCapacity = capacity;
 }
@@ -101,11 +106,12 @@ void initcapacitiveGPIO()
       .intr_type = GPIO_INTR_DISABLE,
   };
   ESP_ERROR_CHECK(gpio_config(&io_conf));
+  // ESP_ERROR_CHECK(gpio_set_level(oscilatorPin, 0));
   ESP_ERROR_CHECK(gpio_set_level(oscilatorPin, 1));
 
   io_conf.pin_bit_mask = 1ULL << pulsePin;
   io_conf.mode = GPIO_MODE_INPUT;
-  io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
+  io_conf.pull_up_en = GPIO_PULLDOWN_DISABLE;
   io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
   io_conf.intr_type = GPIO_INTR_DISABLE;
   ESP_ERROR_CHECK(gpio_config(&io_conf));
@@ -150,8 +156,8 @@ int initCapacitiveSensor()
 {
   ESP_LOGI(TAG, "Starting capacitive sensor");
 
-  initPCNT();
   initcapacitiveGPIO();
+  initPCNT();
   initDiffTimer();
 
   ESP_LOGI(TAG, "Capacitive sensor done initializing");
@@ -170,18 +176,20 @@ void capacitiveSensorTask()
 
 void stopCapacitiveSensor()
 {
-  ESP_LOGI(TAG, "Stopping capacitive sensor (%lu)", getCapacitiveSensorValue());
-  ESP_ERROR_CHECK(gptimer_stop(gptimer));
-  ESP_ERROR_CHECK(pcnt_unit_stop(counterHandle));
-  ESP_LOGI(TAG, "Capacitive sensor stopped (%lu)", getCapacitiveSensorValue());
+  ESP_LOGI(TAG, "Stopping capacitive sensor (%li)", getCapacitiveSensorValue());
+  // ESP_ERROR_CHECK(gptimer_stop(gptimer));
+  // ESP_ERROR_CHECK(pcnt_unit_stop(counterHandle));
+  ESP_ERROR_CHECK(gpio_set_level(oscilatorPin, 0));
+  ESP_LOGI(TAG, "Capacitive sensor stopped (%li)", getCapacitiveSensorValue());
 }
 
 void startCapacitiveSensor()
 {
-  ESP_LOGI(TAG, "Starting capacitive sensor (%lu)", getCapacitiveSensorValue());
-  ESP_ERROR_CHECK(gptimer_start(gptimer));
-  ESP_ERROR_CHECK(pcnt_unit_start(counterHandle));
-  ESP_LOGI(TAG, "Capacitive sensor started (%lu)", getCapacitiveSensorValue());
+  ESP_LOGI(TAG, "Starting capacitive sensor (%li)", getCapacitiveSensorValue());
+  // ESP_ERROR_CHECK(gptimer_start(gptimer));
+  // ESP_ERROR_CHECK(pcnt_unit_start(counterHandle));
+  ESP_ERROR_CHECK(gpio_set_level(oscilatorPin, 1));
+  ESP_LOGI(TAG, "Capacitive sensor started (%li)", getCapacitiveSensorValue());
 }
 
 int32_t getCapacityDiff()
@@ -205,4 +213,6 @@ void resetCapacitiveSensorValue()
 {
   overflowCount = 0;
   pcnt_unit_clear_count(counterHandle);
+  lastCapacity = 0;
+  capacityDiff = 0;
 }
