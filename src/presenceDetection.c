@@ -13,7 +13,10 @@
 
 // calibration definitions
 int64_t lastMovement = (int64_t)6.48e7;
+int64_t lastPresenceUpdate = 0;
 int64_t lastCalibration = 0;
+int64_t gotInBed = 0;
+int64_t leftBed = 0;
 unsigned long highCapacity = 275000;
 unsigned long lowCapacity = 200000;
 unsigned long capacityDiffThreshold = 0;
@@ -75,40 +78,80 @@ void setOutOfBedCapacitance(unsigned long capacitance)
 void updateCalibration()
 {
   int64_t time_us = esp_timer_get_time();
-  if (time_us - lastMovement > 1000000ULL * 60ULL * 60ULL * 2ULL)
+
+  if ((time_us - lastCalibration) > 1000000ULL * 60ULL * 60ULL * 12LL)
   {
-    if (!getInBedStatus() && time_us - lastCalibration > 1000000ULL * 60ULL * 60ULL)
+    if (getInBedStatus())
     {
-      highCapacity = (highCapacity * 3 + getCapacityDiffMean()) >> 2;
-      if (highCapacity > 500000)
+      if ((time_us - gotInBed) > 1000000ULL * 60ULL * 60ULL * 2LL)
       {
-        highCapacity = 500000;
+        highCapacity = (highCapacity * 3 + getCapacityDiffMean()) >> 2;
+        if (highCapacity > 500000)
+        {
+          ESP_LOGW(TAG, "High capacity reached limit: %lu (set to 500000)", highCapacity);
+          highCapacity = 500000;
+        }
+        else if (highCapacity < lowCapacity)
+        {
+          ESP_LOGE(TAG, "High capacity is lower than low capacity: %lu < %lu", highCapacity, lowCapacity);
+        }
+        computeThresholds();
+        lastCalibration = time_us;
       }
-      else if (highCapacity < lowCapacity)
+    }
+    else
+    {
+      if ((time_us - leftBed) > 1000000ULL * 60ULL * 60ULL * 2LL)
       {
-        ESP_LOGE(TAG, "High capacity is lower than low capacity: %lu < %lu", highCapacity, lowCapacity);
+        lowCapacity = (lowCapacity * 3 + getCapacityDiffMean()) >> 2;
+        if (lowCapacity < 100000)
+        {
+          ESP_LOGW(TAG, "Low capacity reached limit: %lu (set to 100000)", lowCapacity);
+          lowCapacity = 100000;
+        }
+        else if (lowCapacity > highCapacity)
+        {
+          ESP_LOGE(TAG, "Low capacity is higher than high capacity: %lu > %lu", lowCapacity, highCapacity);
+        }
+        computeThresholds();
+        lastCalibration = time_us;
       }
-      computeThresholds();
-      lastCalibration = time_us;
     }
   }
-  else if (time_us - lastMovement > 10000000)
-  {
-    if (getInBedStatus() && time_us - lastCalibration > 1000000ULL * 60ULL)
-    {
-      lowCapacity = (lowCapacity * 3 + getCapacityDiffMean()) >> 2;
-      if (lowCapacity < 100000)
-      {
-        lowCapacity = 100000;
-      }
-      else if (lowCapacity > highCapacity)
-      {
-        ESP_LOGE(TAG, "Low capacity is higher than high capacity: %lu > %lu", lowCapacity, highCapacity);
-      }
-      computeThresholds();
-      lastCalibration = time_us;
-    }
-  }
+  // if ((time_us - lastMovement) > 1000000ULL * 60ULL * 60ULL * 2ULL)
+  // {
+  //   if (!getInBedStatus() && (time_us - lastCalibration) > 1000000ULL * 60ULL * 60ULL * 12LL)
+  //   {
+  //     highCapacity = (highCapacity * 3 + getCapacityDiffMean()) >> 2;
+  //     if (highCapacity > 500000)
+  //     {
+  //       highCapacity = 500000;
+  //     }
+  //     else if (highCapacity < lowCapacity)
+  //     {
+  //       ESP_LOGE(TAG, "High capacity is lower than low capacity: %lu < %lu", highCapacity, lowCapacity);
+  //     }
+  //     computeThresholds();
+  //     lastCalibration = time_us;
+  //   }
+  // }
+  // else if ((time_us - lastMovement) > 10000000)
+  // {
+  //   if (getInBedStatus() && (time_us - lastCalibration) > 1000000ULL * 60ULL * 60ULL * 12LL)
+  //   {
+  //     lowCapacity = (lowCapacity * 3 + getCapacityDiffMean()) >> 2;
+  //     if (lowCapacity < 100000)
+  //     {
+  //       lowCapacity = 100000;
+  //     }
+  //     else if (lowCapacity > highCapacity)
+  //     {
+  //       ESP_LOGE(TAG, "Low capacity is higher than high capacity: %lu > %lu", lowCapacity, highCapacity);
+  //     }
+  //     computeThresholds();
+  //     lastCalibration = time_us;
+  //   }
+  // }
 }
 
 void notifyMovement()
@@ -120,37 +163,42 @@ void notifyMovement()
 
 void updateInBedStatus()
 {
-  // if (!movementFlag && (esp_timer_get_time() - lastMovement) < 1000000ULL * 5ULL)
-  // {
-  //   return;
-  // }
-  // else
-  // {
-  //   ESP_LOGD(TAG, "Piezo detected movement: %lu\nUpdating inBed status", getPiezoSensorValue());
-  //   movementFlag = false;
-  // }
+  int64_t time_us = esp_timer_get_time();
+  /*if (movementFlag && (time_us - lastMovement) > 1000000ULL * 5ULL)
+  {
+    ESP_LOGD(TAG, "Piezo detected movement: %lu\nUpdating inBed status", getPiezoSensorValue());
+    movementFlag = false;
+  }
+  else */if (time_us - lastPresenceUpdate < 1000000ULL * 5ULL)
+  {
+    return;
+  }
+
+  int32_t diff = getCapacityDiff();
+  lastPresenceUpdate = time_us;
 
   if (inBed)
   {
-    if (getCapacityDiff() > capacityDiffThreshold + capacityDiffHysteresis)
+    if (diff > capacityDiffThreshold + capacityDiffHysteresis)
     {
-      ESP_LOGI(TAG, "Out of bed (%lu)", getCapacityDiff());
+      ESP_LOGI(TAG, "Out of bed (%lu)", diff);
       char payload[100];
-      sprintf(payload, "{\"inBed\": false, \"capacity\":%lu}", getCapacityDiff());
+      sprintf(payload, "{\"inBed\": false, \"capacity\":%lu}", diff);
       sendMqttData(payload, MQTT_TOPIC_WAKEUP, 1);
       inBed = false;
-      saveCalibrationValues();
+      leftBed = time_us;
     }
   }
   else
   {
-    if (getCapacityDiff() < capacityDiffThreshold - capacityDiffHysteresis)
+    if (diff < capacityDiffThreshold - capacityDiffHysteresis && diff != 0)
     {
-      ESP_LOGI(TAG, "In bed (%lu)", getCapacityDiff());
+      ESP_LOGI(TAG, "In bed (%lu)", diff);
       char payload[100];
-      sprintf(payload, "{\"inBed\": true, \"capacity\":%lu}", getCapacityDiff());
+      sprintf(payload, "{\"inBed\": true, \"capacity\":%lu}", diff);
       sendMqttData(payload, MQTT_TOPIC_WAKEUP, 1);
       inBed = true;
+      gotInBed = time_us;
     }
   }
 }

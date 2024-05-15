@@ -10,13 +10,13 @@
 
 #define TAG "dataUpload"
 
-bool sendData = 0;
+volatile bool sendData = 0;
 gptimer_handle_t uploadTimerHandle = NULL;
 
-static bool uploadTimerCompareCallback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
+static bool IRAM_ATTR uploadTimerCompareCallback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
 {
     sendData = true;
-    return true;
+    return false;
 }
 
 void initSendTimer()

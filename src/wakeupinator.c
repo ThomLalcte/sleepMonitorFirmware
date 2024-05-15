@@ -15,6 +15,10 @@ unsigned short vibecheckLevel = 0;
 _Bool state = false;
 
 int64_t nextRunTime = 0;
+int64_t motorLastStartTime = 0; // time between vibrations in ms
+int64_t motorLastStopTime = 0;  // time between vibrations in ms
+int64_t motorOntime = 0;  // watchdog for motor
+int64_t motorOfftime = 0;  // watchdog for motor
 
 // set the intensity of the wakeupinator: 0 = vibrations only, 1 = vibrations and sound
 void setVibecheckLevel(const unsigned short level)
@@ -76,6 +80,41 @@ void initWakeupinator()
     ESP_LOGI(TAG, "Starting wakeupinator");
     initWakeupinatorGPIO();
     initLedc();
+
+    motorLastStartTime = esp_timer_get_time();
+    motorLastStopTime = esp_timer_get_time();
+
+    ESP_LOGI(TAG, "Done starting wakeupinator");
+}
+
+void enableSound()
+{
+    ESP_ERROR_CHECK(ledc_timer_resume(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1 << 9));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+}
+
+void disableSound()
+{
+    ESP_ERROR_CHECK(ledc_timer_pause(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+}
+
+
+void enableMotor()
+{
+    motorLastStartTime = esp_timer_get_time();
+    // motorOntime += (motorLastStartTime - motorLastStopTime)/1000;
+    ESP_ERROR_CHECK(gpio_set_level(motorPin, 1));
+}
+
+void disableMotor()
+{
+    motorLastStopTime = esp_timer_get_time();
+    // motorOfftime += (motorLastStopTime - motorLastStartTime)/1000;
+    // motorOfftime += min(60000, motorOntime);
+    ESP_ERROR_CHECK(gpio_set_level(motorPin, 0));
 }
 
 void enableWakeupinator()
@@ -89,40 +128,53 @@ void disableWakeupinator()
 {
     ESP_LOGI(TAG, "Disabling wakeupinator");
     wakeupinatorEnabled = false;
-    ESP_ERROR_CHECK(gpio_set_level(motorPin, 0));
-    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
-    // ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+    disableMotor();
+    disableSound();
     vibecheckLevel = 0;
 }
 
 void wakeupinatorTask()
 {
+    int64_t time_us = esp_timer_get_time();
+
+    // if ((motorOntime - motorOfftime > 60000) && wakeupinatorEnabled)
+    // {
+    //     ESP_LOGI(TAG, "motor was on for too long, disabling wakeupinator (%lld & %lld)", motorOntime, motorOfftime);
+    //     motorOntime = 0;
+    //     motorOfftime = 0;
+    //     disableWakeupinator();
+    // }
+
+    if ((time_us - motorLastStartTime) > 5LL * 60LL * 1000000LL && motorLastStartTime > motorLastStopTime)
+    {
+        ESP_LOGI(TAG, "motor was on for too long, disabling wakeupinator (%lld & %lld)", motorLastStartTime, motorLastStopTime);
+        disableWakeupinator();
+    }
+
     if (wakeupinatorEnabled)
     {
-        if (esp_timer_get_time() > nextRunTime)
+        if (time_us > nextRunTime)
         {
-            nextRunTime = esp_timer_get_time() + cycleTime * 1000;
+            nextRunTime = time_us + cycleTime * 1000;
             if (state)
             {
-                // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
-                ESP_ERROR_CHECK(gpio_set_level(motorPin, 0));
+                disableMotor();
+                disableSound();
             }
             else
             {
                 switch (vibecheckLevel)
                 {
                 case 0:
-                    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0));
-                    ESP_ERROR_CHECK(gpio_set_level(motorPin, 1));
+                    enableMotor();
                     break;
                 case 1:
-                    // ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 1 << 9));
-                    ESP_ERROR_CHECK(gpio_set_level(motorPin, 1));
+                    enableSound();
+                    enableMotor();
                     break;
                 }
             }
         }
         state = !state;
-        // ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
     }
 }

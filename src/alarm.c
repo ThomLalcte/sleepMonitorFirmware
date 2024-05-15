@@ -133,20 +133,29 @@ void alarmTask()
         return;
     }
 
+
     switch (alarmState)
     {
     case ALARM_OFF:
         if (nextAlarm < getTime())
         {
-            if (nextAlarmStrengh == 0)
+            if (nextAlarmStrengh == 1)
             {
                 alarmState = ALARM_PRIMED;
+                ESP_LOGI(TAG, "Alarm primed");
             }
             else
             {
                 alarmState = ALARM_PRIMED_PREWAKE;
+                ESP_LOGI(TAG, "Prewake primed");
             }
             nextAlarm += 60 * 60 * 24;
+            nvs_handle_t nvsHandle;
+            ESP_ERROR_CHECK(nvs_open("storage", NVS_READWRITE, &nvsHandle));
+            ESP_ERROR_CHECK(nvs_set_i64(nvsHandle, NEXT_ALARM_NVS_KEY, nextAlarm));
+            ESP_ERROR_CHECK(nvs_commit(nvsHandle));
+            nvs_close(nvsHandle);
+
         }
         break;
     case ALARM_PRIMED:
@@ -162,28 +171,33 @@ void alarmTask()
         else
         {
             alarmState = ALARM_OFF;
+            ESP_LOGI(TAG, "Alarm not activated: not in bed");
             disableWakeupinator();
         }
         break;
     case ALARM_ON:
-        // ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
+        // if ((time_us - startTime) > (10 * 1000000))
         if (!getInBedStatus())
+        // if (0)
         {
             alarmState = ALARM_OFF;
             disableWakeupinator();
+            ESP_LOGI(TAG, "No longer in bed, alarm off. Next alarm: %lld", nextAlarm);
         }
         if ((time_us - startTime) > (120 * 1000000))
         {
             setVibecheckLevel(1);
             alarmState = ALARM_MORE_ON;
+            ESP_LOGI(TAG, "Enabling stronger alarm after 120 seconds");
         }
         break;
     case ALARM_MORE_ON:
-        ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
+        // ESP_LOGI(TAG, "Alarm on for %llu seconds", (time_us - startTime) / 1000000);
         if (!getInBedStatus())
         {
             alarmState = ALARM_OFF;
             disableWakeupinator();
+            ESP_LOGI(TAG, "No longer in bed, alarm off");
         }
         if ((time_us - startTime) > (240 * 1000000))
         {
@@ -191,11 +205,6 @@ void alarmTask()
             disableWakeupinator();
             ESP_LOGI(TAG, "Alarm timed out after 240 seconds");
         }
-        break;
-    case ALARM_FAILED:
-        // contact the server and report the failure
-        sendMqttData("alarm failed", MQTT_TOPIC_ALARM, 0);
-        alarmState = ALARM_OFF;
         break;
     case ALARM_PRIMED_PREWAKE:
         if (getInBedStatus())
@@ -214,6 +223,11 @@ void alarmTask()
             alarmState = ALARM_OFF;
             disableWakeupinator();
         }
+        break;
+    case ALARM_FAILED:
+        // contact the server and report the failure
+        sendMqttData("alarm failed", MQTT_TOPIC_ALARM, 0);
+        alarmState = ALARM_OFF;
         break;
     default:
         alarmState = ALARM_OFF;

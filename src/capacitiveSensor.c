@@ -39,8 +39,8 @@ void computeCapacityDiff()
 {
   int32_t capacity = getCapacitiveSensorValue();
   capacityDiff = capacity - lastCapacity;
-  // capacityDiffMean = (capacityDiffMean * ((1 << capacityDiffMeanFactor) - 1) + capacityDiff) >> capacityDiffMeanFactor;
-  capacityDiffMean = capacityDiff;
+  capacityDiffMean = (capacityDiffMean * ((1 << capacityDiffMeanFactor) - 1) + capacityDiff) >> capacityDiffMeanFactor;
+  // capacityDiffMean = capacityDiff;
   if (capacityDiff > (capacityDiffMean * 3))
   {
     ESP_LOGE(TAG, "Capacity diff too high | capacity: %li | lastCapacity: %li | diff: %li | diffMean: %li", capacity, lastCapacity, capacityDiff, capacityDiffMean);
@@ -55,7 +55,7 @@ void computeCapacityDiff()
 static bool overflowHandler(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *edata, void *user_ctx)
 {
   overflowCount++;
-  return true;
+  return false;
 }
 
 void initPCNT()
@@ -214,5 +214,6 @@ void resetCapacitiveSensorValue()
   overflowCount = 0;
   pcnt_unit_clear_count(counterHandle);
   lastCapacity = 0;
-  capacityDiff = 0;
+  // capacityDiff = 0;
+  gptimer_set_raw_count(gptimer, 0);
 }

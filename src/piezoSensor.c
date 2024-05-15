@@ -30,7 +30,7 @@ static bool IRAM_ATTR s_conv_done_cb(adc_continuous_handle_t handle, const adc_c
     BaseType_t mustYield = pdFALSE;
     checkReadingsFlag = true;
     vTaskNotifyGiveFromISR(s_task_handle, &mustYield);
-    return mustYield == pdTRUE;
+    return (mustYield == pdTRUE);
 }
 
 void initADC()
@@ -110,10 +110,10 @@ void readPiezoSensor()
     {
         decreasePiezoSensitivity();
     }
-    // if (bufferSum > 100)
-    // {
-    //     notifyMovement();
-    // }
+    if (bufferSum > 10)
+    {
+        notifyMovement();
+    }
     bufferSum *= pow10(-piezoParameters.attenuation);
     bufferSum *= pow10(piezoParameters.gain);
     piezoSensorValue += bufferSum;

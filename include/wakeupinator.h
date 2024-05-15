@@ -6,6 +6,7 @@
 #define buzzPinB 14
 #define ledPin 2
 #define cycleTime 1000
+#define motorWatchdog 300 // in seconds
 
 
 void initWakeupinator();
