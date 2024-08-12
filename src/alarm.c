@@ -137,7 +137,7 @@ void alarmTask()
     switch (alarmState)
     {
     case ALARM_OFF:
-        if (nextAlarm < getTime())
+        if (nextAlarm < getTime() && nextAlarm != 0 && getTime() - nextAlarm < 60 * 60 * 12)
         {
             if (nextAlarmStrengh == 1)
             {
