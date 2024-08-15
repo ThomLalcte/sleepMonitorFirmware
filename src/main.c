@@ -14,6 +14,7 @@
 #include "dataUpload.h"
 #include "console.h"
 #include "timeSync.h"
+#include "ota.h"
 
 #include "esp_log.h"
 
@@ -29,8 +30,9 @@ void tempButtonCallback()
 static void initialize_nvs(void)
 {
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK( nvs_flash_erase() );
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
@@ -38,7 +40,7 @@ static void initialize_nvs(void)
 
 
 
-void app_main() 
+void app_main()
 {
     initialize_nvs();
 
@@ -52,6 +54,9 @@ void app_main()
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
+    initialize_ota();
+    ota_task(NULL);
+
     // Initialize the piezo sensor
     s_task_handle = xTaskGetCurrentTaskHandle();
     initPiezoSensor(&s_task_handle);
@@ -64,15 +69,14 @@ void app_main()
 
     // Initialize the MQTT
     initMQTT();
-    
+
     // Initialize the data upload
     initDataUpload();
-    
 
     // Initialize the button
     initButton();
     setButtonPressedCallback(tempButtonCallback);
-    
+
     // Initialize the alarm
     initAlarm();
 
@@ -82,7 +86,8 @@ void app_main()
     // Start the console task
     initConsole();
 
-    while(1) {
+    while (1)
+    {
 
         wifiTask();
 
